@@ -5,9 +5,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Web.Helpers;
+using Google.Apis.Auth;
+using Google.Apis.Auth.OAuth2;
+using Microsoft.EntityFrameworkCore;
 
 namespace _04_API_HospitalAPP.Controllers
 {
@@ -66,7 +70,85 @@ namespace _04_API_HospitalAPP.Controllers
 
             return BadRequest(new { msg = "Error" });
         }
-        
+
+        /*
+
+        private async Task<object> validateGoogleToken(string token)
+        {
+            GoogleJsonWebSignature.Payload payload = await GoogleJsonWebSignature.ValidateAsync(u.Token);
+
+            Debug.WriteLine(payload.Email);
+            Debug.WriteLine(payload.Picture);
+            Debug.WriteLine(payload.Name);
+
+            return { name= payload.Name,picture= payload.Picture,email= payload.Email }
+
+        }
+        */
+        [HttpPost("google")]
+        //Authenticate
+        public async Task<ActionResult> PostGoogle(LoginGoogleViewModel u)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    //verify google token
+                    GoogleJsonWebSignature.Payload payload = await GoogleJsonWebSignature.ValidateAsync(u.Token);
+
+                    string email = payload.Email;
+                    string name = payload.Name;
+                    string picture = payload.Picture;
+
+                    User userDB = _context.Users.SingleOrDefault(user => user.Email == email);
+                    User newUser;
+                    if (userDB == null)
+                    {
+                        //create a new user
+                        newUser=new User() { 
+                            Email=email,
+                            Img=picture,
+                            Name=name,
+                            Google=true,
+                            Password="#####"
+                        };
+                        _context.Users.Add(newUser);
+                        _context.SaveChanges();
+                    }
+                    else
+                    {
+                        newUser = userDB;
+                        newUser.Google = true;
+                        //newUser.Password = "#####";
+                        _context.Entry(newUser).State = EntityState.Modified;
+
+                        try
+                        {
+                            await _context.SaveChangesAsync();
+                        }
+                        catch (DbUpdateConcurrencyException)
+                        {
+                            return NotFound();
+                        }
+                    }
+
+                    var token = _jWTManager.Authenticate(newUser);
+                    //email,name,given_name,family_name,picture,jti (jwt ID)
+                    return Ok(new { ok = true, token});
+
+
+                }
+                catch (Exception)
+                {
+                    return Unauthorized(new { ok = false, msg = "Invalid credentials" });
+
+                }
+            }
+
+            return BadRequest(new { msg = ModelState.Values.SelectMany(v => v.Errors).ToList()
+
+        });
+        }
 
     }
 }
