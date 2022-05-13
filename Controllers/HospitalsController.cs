@@ -126,28 +126,40 @@ namespace _04_API_HospitalAPP.Controllers
 
         // PUT: api/User/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutHospital(int id, Hospital hospital)
+        public async Task<IActionResult> PutHospital(int id, HospitalViewModel hospital)
         {
-
-            var h = _context.Hospitals.SingleOrDefault(u => u.UserID == id);
-            if (h == null)
+            Tuple<string, bool> token = validateJWT();
+            if (!token.Item2)
             {
-                return NotFound(new { ok = false, msg = "We could not find an user with that ID" });
+                return Unauthorized(new { msg = token.Item1 });//401 unautorized
             }
-
-            _context.Entry(h).State = EntityState.Modified;
-
-            try
+            else
             {
-                //TODO: change h values to  hospital values
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                return NotFound();
-            }
+                var h = _context.Hospitals.SingleOrDefault(ho => ho.HospitalID == id);
+                if (h == null)
+                {
+                    return NotFound(new { ok = false, msg = "We could not find an user with that ID" });
+                }
 
-            return Ok(new { ok = true, hospital = h });
+                _context.Entry(h).State = EntityState.Modified;
+
+                try
+                {
+                    if (hospital.Name != null && hospital.Name != "" )
+                        h.Name = hospital.Name;
+                    h.UserID = Int32.Parse(token.Item1);
+                    //TODO: change h values to  hospital values
+                    await _context.SaveChangesAsync();
+                    return Ok(new { ok = true, hospital = h, msg="Hospital updated" });
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    return NotFound();
+                }
+
+
+            }
+            
 
         }
 
@@ -157,16 +169,25 @@ namespace _04_API_HospitalAPP.Controllers
         {
             try
             {
-                var hospital = await _context.Hospitals.FindAsync(id);
-                if (hospital == null)
+                Tuple<string, bool> token = validateJWT();
+                if (!token.Item2)
                 {
-                    return NotFound(new { ok = false, msg = "We could not find an hospital with that ID" });
+                    return Unauthorized(new { msg = token.Item1 });//401 unautorized
                 }
+                else
+                {
 
-                _context.Hospitals.Remove(hospital);
-                await _context.SaveChangesAsync();
+                    var hospital = await _context.Hospitals.FindAsync(id);
+                    if (hospital == null)
+                    {
+                        return NotFound(new { ok = false, msg = "We could not find an hospital with that ID" });
+                    }
+                    //hospital.
+                    _context.Hospitals.Remove(hospital);
+                    await _context.SaveChangesAsync();
 
-                return Ok(new { ok = true, msg = "Hospital deleted" });
+                    return Ok(new { ok = true, msg = "Hospital deleted" });
+                }
             }
             catch (Exception)
             {

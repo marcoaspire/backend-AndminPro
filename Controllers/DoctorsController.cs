@@ -144,28 +144,55 @@ namespace _04_API_HospitalAPP.Controllers
 
         // PUT: api/User/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutDoctor(int id, Doctor doctor)
+        public async Task<IActionResult> PutDoctor(int id, DoctorViewModel doctor)
         {
-
-            var d = _context.Doctors.SingleOrDefault(d => d.DoctorID == id);
-            if (d == null)
+            Tuple<string, bool> token = validateJWT();
+            if (!token.Item2)
             {
-                return NotFound(new { ok = false, msg = "We could not find a doctor with that ID" });
+                return Unauthorized(new { msg = token.Item1 });//401 unautorized
+            }
+            else
+            {
+                var d = _context.Doctors.SingleOrDefault(d => d.DoctorID == id);
+                if (d == null)
+                {
+                    return NotFound(new { ok = false, msg = "We could not find a doctor with that ID" });
+                }
+                if (doctor.HospitalID !=null && doctor.HospitalID >0)
+                {
+                    var h = _context.Hospitals.SingleOrDefault(ho => ho.HospitalID == doctor.HospitalID);
+                    if (h==null)
+                    { 
+                        return NotFound(new { ok = false, msg = "We could not find a hospital with that ID" });
+                    }
+                    d.HospitalID = doctor.HospitalID;
+
+                }
+                if (doctor.Name != null && doctor.Name != "")
+                {
+                    d.Name = doctor.Name;
+                }
+                d.UserID = Int32.Parse(token.Item1);
+
+                _context.Entry(d).State = EntityState.Modified;
+
+                try
+                {
+                    //TODO: change h values to  hospital values
+                    await _context.SaveChangesAsync();
+                    return Ok(new { ok = true, doctor = d });
+
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    return NotFound();
+                }
+
+
             }
 
-            _context.Entry(d).State = EntityState.Modified;
+            
 
-            try
-            {
-                //TODO: change h values to  hospital values
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                return NotFound();
-            }
-
-            return Ok(new { ok = true, doctor = d });
 
         }
 
@@ -173,23 +200,32 @@ namespace _04_API_HospitalAPP.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDoctor(int id)
         {
-            try
+            Tuple<string, bool> token = validateJWT();
+            if (!token.Item2)
             {
-                var doctor = await _context.Doctors.FindAsync(id);
-                if (doctor == null)
+                return Unauthorized(new { msg = token.Item1 });//401 unautorized
+            }
+            else
+            {
+                try
                 {
-                    return NotFound(new { ok = false, msg = "We could not find a doctor with that ID" });
+                    var doctor = await _context.Doctors.FindAsync(id);
+                    if (doctor == null)
+                    {
+                        return NotFound(new { ok = false, msg = "We could not find a doctor with that ID" });
+                    }
+
+                    _context.Doctors.Remove(doctor);
+                    await _context.SaveChangesAsync();
+
+                    return Ok(new { ok = true, msg = "Doctor deleted" });
                 }
-
-                _context.Doctors.Remove(doctor);
-                await _context.SaveChangesAsync();
-
-                return Ok(new { ok = true, msg = "Doctor deleted" });
+                catch (Exception)
+                {
+                    return StatusCode(500, new { ok = false, msg = "Unexpected error, check logs" });
+                }
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { ok = false, msg = "Unexpected error, check logs" });
-            }
+            
 
         }
     }

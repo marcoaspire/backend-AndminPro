@@ -161,6 +161,14 @@ namespace _04_API_HospitalAPP.Controllers
             return false;
         }
 
+        private bool valueExists(string value)
+        {
+            if (value != null && value != "")
+                return true;
+            else
+                return false;
+        }
+
 
         [HttpPost]
         public ActionResult PostUser(User user)
@@ -179,11 +187,6 @@ namespace _04_API_HospitalAPP.Controllers
 
                 return Ok(new { ok = true, user,token });
                
-                //else
-                //{
-                //    return BadRequest(new { ok = false, msg = "Email has already been registered" });
-
-                //}
             }
             catch(DbUpdateException ex)
             {
@@ -200,41 +203,84 @@ namespace _04_API_HospitalAPP.Controllers
 
         // PUT: api/User/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutUser(int id, UpdateUser user)
+        public async Task<IActionResult> PutUser(int id, UserViewModel user)
         {
-
-            var u = _context.Users.SingleOrDefault(u => u.UserID == id);
-            if (u == null)
-            {
-                return NotFound(new { ok = false, msg = "We could not find an user with that ID" });
-            }
-
-            if (u.Email!= user.Email)
-            {
-                if (this.emailRegistered(user.Email))
-                    return BadRequest(new { ok = false, msg = "Email has already been registered" });
-            }
-
-            //TODO: token validation
-            
-            
-            u.Email=user.Email;
-            u.Name=user.Name;
-            u.Role=user.Role;
-
-            _context.Entry(u).State = EntityState.Modified;
-
+            Tuple<string, bool> token = validateJWT();
             try
             {
-                await _context.SaveChangesAsync();
+                if (Int32.Parse(token.Item1) != id)
+                {
+                    return Unauthorized(new { msg = "You must not update this user" });//401 unautorized
+                }
+                if (!token.Item2 || Int32.Parse(token.Item1) != id)
+                {
+                    return Unauthorized(new { msg = token.Item1 });//401 unautorized
+                }
+                else
+                {
+                    var u = _context.Users.SingleOrDefault(u => u.UserID == id);
+                    if (u == null)
+                    {
+                        return NotFound(new { ok = false, msg = "We could not find an user with that ID" });
+                    }
+                    if (valueExists(user.Email))
+                    {
+                        if (u.Email != user.Email)
+                        {
+                            if (this.emailRegistered(user.Email))
+                                return BadRequest(new { ok = false, msg = "Email has already been registered" });
+                            else
+                                u.Email = user.Email;
+                        }
+                    }
+                    if (valueExists(user.Name))
+                    {
+                        u.Name = user.Name;
+                    }
+                    if (valueExists(user.Role))
+                    {
+                        u.Role = user.Role;
+
+                    }
+
+                    _context.Entry(u).State = EntityState.Modified;
+
+
+                    await _context.SaveChangesAsync();
+                    return Ok(new { ok = true, user = u });
+                }
             }
             catch (DbUpdateConcurrencyException)
             {
                 return NotFound();
             }
+            
 
-            return Ok(new { ok = true, user=u });
 
+            
+
+        }
+
+        private Tuple<string, bool> validateJWT()
+        {
+            string token = (Request.Headers["x-token"]);
+
+            Trace.WriteLine(token);
+            if (token == null || token.Length == 0)
+            {
+                return new Tuple<string, bool>("Did not receive a token", false);
+            }
+            else
+            {
+                //validate jwt
+                Tokens t = _jWTManager.VerifyToken(token);
+                if (t.RefreshToken == true)
+                {
+                    return new Tuple<string, bool>(t.Token, true);
+                }
+                else
+                    return new Tuple<string, bool>(t.Token, false);
+            }
         }
 
         // DELETE: api/PaymentDetail/5
@@ -243,16 +289,26 @@ namespace _04_API_HospitalAPP.Controllers
         {
             try
             {
-                var user = await _context.Users.FindAsync(id);
-                if (user == null)
+                Tuple<string, bool> token = validateJWT();
+                if (!token.Item2)
                 {
-                    return NotFound(new { ok = false, msg = "We could not find an user with that ID" });
+                    return Unauthorized(new { msg = token.Item1 });//401 unautorized
+                }
+                else
+                {
+                    var user = await _context.Users.FindAsync(id);
+                    if (user == null)
+                    {
+                        return NotFound(new { ok = false, msg = "We could not find an user with that ID" });
+                    }
+
+                    _context.Users.Remove(user);
+                    await _context.SaveChangesAsync();
+
+                    return Ok(new { ok = true, msg = "User deleted" });
+
                 }
 
-                _context.Users.Remove(user);
-                await _context.SaveChangesAsync();
-
-                return Ok(new { ok = true, msg = "User deleted" });
             }
             catch (Exception)
             {

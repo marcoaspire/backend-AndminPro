@@ -150,5 +150,35 @@ namespace _04_API_HospitalAPP.Controllers
         });
         }
 
+
+        //revalidate token
+        [HttpGet]
+        [Route("renew")]
+        public ActionResult RefreshToken()
+        {
+            Debug.WriteLine("Renew2");
+
+            string token = (Request.Headers["x-token"]);
+            if (token == null)
+            {
+                return Ok(new { msg = "Did not receive a token, 401 Unautorized" });//401 unautorized
+
+            }
+            else
+            {
+                //validate jwt
+                Tokens t = _jWTManager.VerifyToken(token);
+                if (t.RefreshToken == true)
+                {
+                    var userLog = _context.Users.SingleOrDefault(user => user.UserID.ToString() == t.Token);
+                    var newToken = _jWTManager.Authenticate(userLog);
+                    return Ok(new { ok = true, id = userLog.UserID, name = userLog.Name, token = newToken.Token });
+                }
+
+            }
+            return Ok(new { msg = "Error2" });
+
+
+        }
     }
 }

@@ -51,11 +51,13 @@
         function onSignIn(response) {
             //token returned by google
             console.log(parseJwt(response.credential));
+            console.log(response.credential);
         }
 
         //sign off
         function signOut() {
             console.log("bye");
+
             google.accounts.id.disableAutoSelect();
           
         }
