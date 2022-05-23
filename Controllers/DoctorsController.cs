@@ -76,6 +76,8 @@ namespace _04_API_HospitalAPP.Controllers
                             })
                             */
                             .Include(d => d.User)
+                            .Include(d => d.Hospital)
+
                             .ToList(),
                         ok = true, id = t.Token });
                 }
@@ -92,11 +94,14 @@ namespace _04_API_HospitalAPP.Controllers
         [HttpGet("{id}")]
         public ActionResult GetUser(int id)
         {
-            var h = _context.Doctors.SingleOrDefault(hospital => hospital.HospitalID == id);
+            var h = _context.Doctors
+                .Include(d => d.User)
+                .Include(d => d.Hospital)
+                .SingleOrDefault(d => d.DoctorID == id);
             return Ok(new
             {
-                results = h,
-                msg = "hospital",
+                doctor = h,
+                ok = "true",
 
             });
 
@@ -158,7 +163,7 @@ namespace _04_API_HospitalAPP.Controllers
                 {
                     return NotFound(new { ok = false, msg = "We could not find a doctor with that ID" });
                 }
-                if (doctor.HospitalID !=null && doctor.HospitalID >0)
+                if (doctor.HospitalID >0)
                 {
                     var h = _context.Hospitals.SingleOrDefault(ho => ho.HospitalID == doctor.HospitalID);
                     if (h==null)
@@ -166,6 +171,11 @@ namespace _04_API_HospitalAPP.Controllers
                         return NotFound(new { ok = false, msg = "We could not find a hospital with that ID" });
                     }
                     d.HospitalID = doctor.HospitalID;
+
+                }
+                else
+                {
+                    return BadRequest(new { ok = false, msg = "HospitalID should be a positive number" });
 
                 }
                 if (doctor.Name != null && doctor.Name != "")

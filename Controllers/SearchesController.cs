@@ -187,7 +187,7 @@ namespace _04_API_HospitalAPP.Controllers
             return filePath;
         }
 
-        [HttpPut("/api/upload/{table}/{id}")]
+        [HttpPut("/api/uploads/{table}/{id}")]
 
         public async Task<IActionResult> UploadFile(string table, string id)
         {
@@ -212,6 +212,7 @@ namespace _04_API_HospitalAPP.Controllers
                 //validate jwt
                 Tokens t = _jWTManager.VerifyToken(token);
                 Trace.WriteLine(Request.Form.Files.Count);
+
                 if (t.RefreshToken == true)
                 {
                     switch (table)
@@ -276,6 +277,7 @@ namespace _04_API_HospitalAPP.Controllers
                             return Ok(new { ok = true, hospital, msg = "file uploaded" });
 
                         case "users":
+                            Trace.WriteLine("upload file");
                             //Users
                             var user = _context.Users.SingleOrDefault(u => u.UserID == ID);
                             //delete old img
@@ -312,7 +314,7 @@ namespace _04_API_HospitalAPP.Controllers
         }
 
 
-        [HttpGet("/api/upload/{table}/{id}")]
+        [HttpGet("/api/uploads/{table}/{id}")]
         public ActionResult SeachImage(string table, string id)
         {
             table = table.ToLower();

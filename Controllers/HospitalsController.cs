@@ -59,7 +59,7 @@ namespace _04_API_HospitalAPP.Controllers
             else
             {
                 //validate jwt
-                return Ok(new { users = _context.Hospitals.Include(h => h.User).ToList(), ok = true, id = token.Item1 });
+                return Ok(new { hospitals = _context.Hospitals.Include(h => h.User).ToList(), ok = true, id = token.Item1 });
                 
 
             }

@@ -225,12 +225,16 @@ namespace _04_API_HospitalAPP.Controllers
                     }
                     if (valueExists(user.Email))
                     {
-                        if (u.Email != user.Email)
+                        if (u.Email != user.Email && !u.Google)
                         {
                             if (this.emailRegistered(user.Email))
                                 return BadRequest(new { ok = false, msg = "Email has already been registered" });
                             else
                                 u.Email = user.Email;
+                        }
+                        else if (u.Google)
+                        {
+                            return BadRequest(new { ok = false, msg = "Google users cannot change their email" });
                         }
                     }
                     if (valueExists(user.Name))

@@ -159,9 +159,9 @@ namespace _04_API_HospitalAPP.Controllers
             Debug.WriteLine("Renew2");
 
             string token = (Request.Headers["x-token"]);
-            if (token == null)
+            if (token == null || token =="")
             {
-                return Ok(new { msg = "Did not receive a token, 401 Unautorized" });//401 unautorized
+                return Unauthorized(new { msg = "Did not receive a token" });//401 unautorized
 
             }
             else
@@ -172,11 +172,11 @@ namespace _04_API_HospitalAPP.Controllers
                 {
                     var userLog = _context.Users.SingleOrDefault(user => user.UserID.ToString() == t.Token);
                     var newToken = _jWTManager.Authenticate(userLog);
-                    return Ok(new { ok = true, id = userLog.UserID, name = userLog.Name, token = newToken.Token });
+                    return Ok(new { ok = true, user = userLog, token = newToken.Token });
                 }
 
             }
-            return Ok(new { msg = "Error2" });
+            return Unauthorized(new { msg = "Error2" });
 
 
         }

@@ -92,11 +92,14 @@ namespace _04_API_HospitalAPP.Repository
             }
             catch (SecurityTokenExpiredException)
             {
+                Debug.WriteLine("token expired");
 
                 return new Tokens { Token = "Token Expired" };
             }
             catch (Exception w)
             {
+                Debug.WriteLine("otra exeption");
+
                 Trace.WriteLine("Excepciotn "+ w);
                 
 
