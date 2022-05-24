@@ -12,6 +12,7 @@ using System.Web.Helpers;
 using Google.Apis.Auth;
 using Google.Apis.Auth.OAuth2;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace _04_API_HospitalAPP.Controllers
 {
@@ -54,7 +55,14 @@ namespace _04_API_HospitalAPP.Controllers
                         }
                         //create jwt
                         var token = _jWTManager.Authenticate(userLog);
-                        return Ok(new { ok = true, token });
+
+
+
+                        //Menu =
+                        //checar role en db
+                        var json = JsonSerializer.Serialize(getMenu(userLog.Role));
+                        
+                        return Ok(new { ok = true, token, menu=json });
 
                     }
 
@@ -131,10 +139,11 @@ namespace _04_API_HospitalAPP.Controllers
                             return NotFound();
                         }
                     }
+                    var json = JsonSerializer.Serialize(getMenu(newUser.Role));
 
                     var token = _jWTManager.Authenticate(newUser);
                     //email,name,given_name,family_name,picture,jti (jwt ID)
-                    return Ok(new { ok = true, token});
+                    return Ok(new { ok = true, token, menu = json });
 
 
                 }
@@ -172,7 +181,9 @@ namespace _04_API_HospitalAPP.Controllers
                 {
                     var userLog = _context.Users.SingleOrDefault(user => user.UserID.ToString() == t.Token);
                     var newToken = _jWTManager.Authenticate(userLog);
-                    return Ok(new { ok = true, user = userLog, token = newToken.Token });
+                    var json = JsonSerializer.Serialize(getMenu(userLog.Role));
+
+                    return Ok(new { ok = true, user = userLog, token = newToken.Token, menu=json });
                 }
 
             }
@@ -180,5 +191,84 @@ namespace _04_API_HospitalAPP.Controllers
 
 
         }
+
+
+        
+
+        private List<Menu> getMenu(string role="USER_ROLE")
+        {
+            Debug.WriteLine("role es:");
+
+            Debug.WriteLine(role);
+
+
+            //Submenu sm = new Submenu("Users", "users");
+            Submenu sm2 = new Submenu("Hospitals", "hospitals");
+            Submenu sm3 = new Submenu("Doctors", "doctors");
+
+            List<Submenu> subMaintenance = new() { sm2, sm3 };
+
+            Menu menuMaintenance = new Menu("Maintenance", "mdi mdi-folder-lock-open", subMaintenance);
+
+            Submenu s = new Submenu("Main", "/dashboard");
+            Submenu s2 = new Submenu("Progress", "progress");
+            Submenu s3 = new Submenu("Chart1", "chart1");
+            Submenu s4 = new Submenu("Promises", "promises");
+            Submenu s5 = new Submenu("Rxjs", "rxjs");
+            List<Submenu> subDashboard = new () { s, s2, s3,s4,s5 };
+            Menu menuDashboard = new Menu("Dashboard", "mdi mdi-gauge", subDashboard);
+
+            List<Menu> menu = new () {
+
+                menuDashboard,
+                menuMaintenance
+
+            };
+
+            if (role == "ADMIN_ROLE")
+            {
+                Submenu sm = new Submenu("Users", "users");
+                //checar como se agrega a un array
+                menu[menu.Count - 1].Submenu.Add(sm);
+
+            }
+
+            return menu;
+        }
+
+    }
+
+
+    class Menu
+    {
+        private string title;
+        private string icon;
+        private List<Submenu> submenu;
+
+
+        public Menu(string title, string icon, List<Submenu> submenu)
+        {
+            this.title = title;
+            this.icon = icon;
+            this.submenu = submenu;
+        }
+        public string Title { get => title; set => title = value; }
+        public string Icon { get => icon; set => icon = value; }
+
+        public List<Submenu> Submenu { get => submenu; set => submenu = value; }
+    }
+    class Submenu
+    {
+        private string title;
+        private string url;
+
+        public Submenu(string title, string url)
+        {
+            this.title = title;
+            this.url = url;
+        }
+
+        public string Title { get => title; set => title = value; }
+        public string Url { get => url; set => url = value; }
     }
 }

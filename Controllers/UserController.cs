@@ -208,14 +208,22 @@ namespace _04_API_HospitalAPP.Controllers
             Tuple<string, bool> token = validateJWT();
             try
             {
-                if (Int32.Parse(token.Item1) != id)
+                var userToken = _context.Users.SingleOrDefault(u => u.UserID == Int32.Parse(token.Item1));
+                
+                //Trace.WriteLine(token.Item1);//id token 
+                //Trace.WriteLine(token.Item2);//boolean
+
+                if (Int32.Parse(token.Item1) != id && userToken.Role != "ADMIN_ROLE" || !token.Item2)
                 {
-                    return Unauthorized(new { msg = "You must not update this user" });//401 unautorized
+                    return Unauthorized(new { msg = "You must not update this user" });//401 
                 }
+                //check
+                /*
                 if (!token.Item2 || Int32.Parse(token.Item1) != id)
                 {
-                    return Unauthorized(new { msg = token.Item1 });//401 unautorized
+                    return Unauthorized(new { msg = token.Item1 });//401
                 }
+                */
                 else
                 {
                     var u = _context.Users.SingleOrDefault(u => u.UserID == id);
